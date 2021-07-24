@@ -36,6 +36,7 @@ describe('StakingRewards', () => {
       wallet.address,
       rewardsToken.address,
       stakingToken.address,
+      REWARDS_DURATION
     ])
     const receipt = await provider.getTransactionReceipt(stakingRewards.deployTransaction.hash)
     expect(receipt.gasUsed).to.eq('2375959')
@@ -43,7 +44,7 @@ describe('StakingRewards', () => {
 
   it('rewardsDuration', async () => {
     const rewardsDuration = await stakingRewards.rewardsDuration()
-    expect(rewardsDuration).to.be.eq(REWARDS_DURATION)
+    expect(rewardsDuration).to.be.eq(REWARDS_DURATION * 60 * 60 * 24)
   })
 
   const reward = expandTo18Decimals(100)
@@ -55,7 +56,7 @@ describe('StakingRewards', () => {
 
     const startTime: BigNumber = await stakingRewards.lastUpdateTime()
     const endTime: BigNumber = await stakingRewards.periodFinish()
-    expect(endTime).to.be.eq(startTime.add(REWARDS_DURATION))
+    expect(endTime).to.be.eq(startTime.add(REWARDS_DURATION * 24 * 60 * 60))
     return { startTime, endTime }
   }
 
@@ -78,7 +79,7 @@ describe('StakingRewards', () => {
 
     const rewardAmount = await rewardsToken.balanceOf(staker.address)
     expect(reward.sub(rewardAmount).lte(reward.div(10000))).to.be.true // ensure result is within .01%
-    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION))
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION * 24 * 60 * 60).mul(REWARDS_DURATION * 24 * 60 * 60))
   })
 
   it('stakeWithPermit', async () => {
@@ -111,7 +112,7 @@ describe('StakingRewards', () => {
 
     const rewardAmount = await rewardsToken.balanceOf(staker.address)
     expect(reward.sub(rewardAmount).lte(reward.div(10000))).to.be.true // ensure result is within .01%
-    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION))
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION * 24 * 60 * 60).mul(REWARDS_DURATION * 24 * 60 * 60))
   })
 
   it('notifyRewardAmount: ~half', async () => {
@@ -137,7 +138,7 @@ describe('StakingRewards', () => {
 
     const rewardAmount = await rewardsToken.balanceOf(staker.address)
     expect(reward.div(2).sub(rewardAmount).lte(reward.div(2).div(10000))).to.be.true // ensure result is within .01%
-    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(endTime.sub(stakeStartTime)))
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION * 24 * 60 * 60).mul(endTime.sub(stakeStartTime)))
   }).retries(2) // TODO investigate flakiness
 
   it('notifyRewardAmount: two stakers', async () => {

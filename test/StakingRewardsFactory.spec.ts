@@ -3,7 +3,7 @@ import { Contract, BigNumber } from 'ethers'
 import { solidity, MockProvider, createFixtureLoader } from 'ethereum-waffle'
 
 import { stakingRewardsFactoryFixture } from './fixtures'
-import { mineBlock } from './utils'
+import { mineBlock, REWARDS_DURATION } from './utils'
 
 import StakingRewards from '../build/StakingRewards.json'
 
@@ -42,25 +42,25 @@ describe('StakingRewardsFactory', () => {
 
   describe('#deploy', () => {
     it('pushes the token into the list', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address, 10000)
+      await stakingRewardsFactory.deploy(stakingTokens[1].address, 10000, REWARDS_DURATION)
       expect(await stakingRewardsFactory.stakingTokens(0)).to.eq(stakingTokens[1].address)
     })
 
     it('fails if called twice for same token', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address, 10000)
-      await expect(stakingRewardsFactory.deploy(stakingTokens[1].address, 10000)).to.revertedWith(
+      await stakingRewardsFactory.deploy(stakingTokens[1].address, 10000, REWARDS_DURATION)
+      await expect(stakingRewardsFactory.deploy(stakingTokens[1].address, 10000, REWARDS_DURATION)).to.revertedWith(
         'StakingRewardsFactory::deploy: already deployed'
       )
     })
 
     it('can only be called by the owner', async () => {
-      await expect(stakingRewardsFactory.connect(wallet1).deploy(stakingTokens[1].address, 10000)).to.be.revertedWith(
+      await expect(stakingRewardsFactory.connect(wallet1).deploy(stakingTokens[1].address, 10000, REWARDS_DURATION)).to.be.revertedWith(
         'Ownable: caller is not the owner'
       )
     })
 
     it('stores the address of stakingRewards and reward amount', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address, 10000)
+      await stakingRewardsFactory.deploy(stakingTokens[1].address, 10000, REWARDS_DURATION)
       const [stakingRewards, rewardAmount] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
         stakingTokens[1].address
       )
@@ -69,7 +69,7 @@ describe('StakingRewardsFactory', () => {
     })
 
     it('deployed staking rewards has correct parameters', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address, 10000)
+      await stakingRewardsFactory.deploy(stakingTokens[1].address, 10000, REWARDS_DURATION)
       const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
         stakingTokens[1].address
       )
@@ -98,7 +98,7 @@ describe('StakingRewardsFactory', () => {
       beforeEach('deploy staking reward contracts', async () => {
         stakingRewards = []
         for (let i = 0; i < stakingTokens.length; i++) {
-          await stakingRewardsFactory.deploy(stakingTokens[i].address, rewardAmounts[i])
+          await stakingRewardsFactory.deploy(stakingTokens[i].address, rewardAmounts[i], REWARDS_DURATION)
           const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
             stakingTokens[i].address
           )

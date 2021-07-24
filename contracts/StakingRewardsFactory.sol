@@ -41,12 +41,14 @@ contract StakingRewardsFactory is Ownable {
 
     // deploy a staking reward contract for the staking token, and store the reward amount
     // the reward will be distributed to the staking reward contract no sooner than the genesis
-    function deploy(address stakingToken, uint256 rewardAmount)
-        public
-        onlyOwner
-    {
-        StakingRewardsInfo storage info =
-            stakingRewardsInfoByStakingToken[stakingToken];
+    function deploy(
+        address stakingToken,
+        uint256 rewardAmount,
+        uint256 rewardsDuration
+    ) public onlyOwner {
+        StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[
+            stakingToken
+        ];
         require(
             info.stakingRewards == address(0),
             "StakingRewardsFactory::deploy: already deployed"
@@ -57,7 +59,8 @@ contract StakingRewardsFactory is Ownable {
                 /*_rewardsDistribution=*/
                 address(this),
                 rewardsToken,
-                stakingToken
+                stakingToken,
+                rewardsDuration
             )
         );
         info.rewardAmount = rewardAmount;
@@ -85,8 +88,9 @@ contract StakingRewardsFactory is Ownable {
             "StakingRewardsFactory::notifyRewardAmount: not ready"
         );
 
-        StakingRewardsInfo storage info =
-            stakingRewardsInfoByStakingToken[stakingToken];
+        StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[
+            stakingToken
+        ];
         require(
             info.stakingRewards != address(0),
             "StakingRewardsFactory::notifyRewardAmount: not deployed"
@@ -114,8 +118,9 @@ contract StakingRewardsFactory is Ownable {
         public
         onlyOwner
     {
-        StakingRewardsInfo storage info =
-            stakingRewardsInfoByStakingToken[stakingToken];
+        StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[
+            stakingToken
+        ];
         require(
             info.stakingRewards != address(0),
             "StakingRewardsFactory::notifyRewardAmount: not deployed"
