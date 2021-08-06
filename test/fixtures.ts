@@ -12,6 +12,7 @@ import StakingRewardsFactory from '../build/StakingRewardsFactory.json'
 chai.use(solidity)
 
 const NUMBER_OF_STAKING_TOKENS = 4
+const NUMBER_OF_REWARD_TOKENS=2
 
 interface StakingRewardsFixture {
   stakingRewards: Contract
@@ -35,7 +36,7 @@ export async function stakingRewardsFixture([wallet]: Wallet[]): Promise<Staking
 }
 
 interface StakingRewardsFactoryFixture {
-  rewardsToken: Contract
+  rewardTokens: Contract[]
   stakingTokens: Contract[]
   genesis: number
   rewardAmounts: BigNumber[]
@@ -46,8 +47,11 @@ export async function stakingRewardsFactoryFixture(
   [wallet]: Wallet[],
   provider: providers.Web3Provider
 ): Promise<StakingRewardsFactoryFixture> {
+  const rewardTokens = []
+  for (let i = 0; i < NUMBER_OF_STAKING_TOKENS; i++) {
   const rewardsToken = await deployContract(wallet, TestERC20, [expandTo18Decimals(1_000_000_000)])
-
+  rewardTokens.push(rewardsToken)
+  }
   // deploy staking tokens
   const stakingTokens = []
   for (let i = 0; i < NUMBER_OF_STAKING_TOKENS; i++) {
@@ -59,7 +63,7 @@ export async function stakingRewardsFactoryFixture(
   const { timestamp: now } = await provider.getBlock('latest')
   const genesis = now + 60 * 60
   const rewardAmounts: BigNumber[] = new Array(stakingTokens.length).fill(expandTo18Decimals(10))
-  const stakingRewardsFactory = await deployContract(wallet, StakingRewardsFactory, [rewardsToken.address, genesis])
+  const stakingRewardsFactory = await deployContract(wallet, StakingRewardsFactory,[genesis])
 
-  return { rewardsToken, stakingTokens, genesis, rewardAmounts, stakingRewardsFactory }
+  return { rewardTokens, stakingTokens, genesis, rewardAmounts, stakingRewardsFactory }
 }

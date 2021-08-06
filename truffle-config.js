@@ -50,12 +50,16 @@ module.exports = {
       skipDryRun: true
     }
   },
+  plugins: [
+    'truffle-plugin-verify'
+  ],
   compilers: {
     solc: {
       version: "0.6.11",
       settings: {
         optimizer: {
-          enabled: true
+          enabled: true,
+          runs:1500
         }
       }
     }

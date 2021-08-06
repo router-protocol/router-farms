@@ -166,6 +166,23 @@ contract StakingRewards is
         }
     }
 
+function getRewardRestricted(address account)
+        external
+        override
+        nonReentrant
+        onlyRewardsDistribution
+        updateReward(account)
+    {
+        uint256 reward = rewards[account];
+        if (reward > 0) {
+            rewards[account] = 0;
+            rewardsToken.safeTransfer(account, reward);
+            emit RewardPaid(account, reward);
+        }
+    }
+
+    
+
     function exit() external override {
         withdraw(_balances[_msgSender()]);
         getReward();

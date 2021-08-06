@@ -8,7 +8,6 @@ import "./StakingRewards.sol";
 
 contract StakingRewardsFactory is Ownable {
     // immutables
-    address public rewardsToken;
     uint256 public stakingRewardsGenesis;
 
     // the staking tokens for which the rewards contract has been deployed
@@ -18,22 +17,19 @@ contract StakingRewardsFactory is Ownable {
     struct StakingRewardsInfo {
         address stakingRewards;
         uint256 rewardAmount;
+        address rewardsToken;
     }
 
     // rewards info by staking token
     mapping(address => StakingRewardsInfo)
         public stakingRewardsInfoByStakingToken;
 
-    constructor(address _rewardsToken, uint256 _stakingRewardsGenesis)
-        public
-        Ownable()
-    {
+    constructor(uint256 _stakingRewardsGenesis) public Ownable() {
         require(
             _stakingRewardsGenesis >= block.timestamp,
             "StakingRewardsFactory::constructor: genesis too soon"
         );
 
-        rewardsToken = _rewardsToken;
         stakingRewardsGenesis = _stakingRewardsGenesis;
     }
 
@@ -43,6 +39,7 @@ contract StakingRewardsFactory is Ownable {
     // the reward will be distributed to the staking reward contract no sooner than the genesis
     function deploy(
         address stakingToken,
+        address rewardsToken,
         uint256 rewardAmount,
         uint256 rewardsDuration
     ) public onlyOwner {
@@ -63,6 +60,7 @@ contract StakingRewardsFactory is Ownable {
                 rewardsDuration
             )
         );
+        info.rewardsToken = rewardsToken;
         info.rewardAmount = rewardAmount;
         stakingTokens.push(stakingToken);
     }
@@ -101,7 +99,7 @@ contract StakingRewardsFactory is Ownable {
             info.rewardAmount = 0;
 
             require(
-                IERC20(rewardsToken).transfer(
+                IERC20(info.rewardsToken).transfer(
                     info.stakingRewards,
                     rewardAmount
                 ),
@@ -137,5 +135,17 @@ contract StakingRewardsFactory is Ownable {
         uint256 balance = token.balanceOf(address(this));
         require(balance > 0, "No balance for given token address");
         token.transfer(msg.sender, balance);
+    }
+    //Claim rewards from all pools
+    function claimAll() public {
+        uint256 len = stakingTokens.length;
+        for (uint256 i = 0; i < len; i++) {
+            StakingRewardsInfo storage info = stakingRewardsInfoByStakingToken[
+                stakingTokens[i]
+            ];
+            if (StakingRewards(info.stakingRewards).earned(msg.sender) > 0) {
+                StakingRewards(info.stakingRewards).getRewardRestricted(msg.sender);
+            }
+        }
     }
 }

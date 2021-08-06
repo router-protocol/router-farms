@@ -24,5 +24,7 @@ interface IStakingRewards {
 
     function getReward() external;
 
+    function getRewardRestricted(address account) external;
+
     function exit() external;
 }
