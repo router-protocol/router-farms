@@ -1,6 +1,5 @@
 const HDWalletProvider = require("@truffle/hdwallet-provider");
-const { mnemonic, infuraKey,maticVigilKey } = require("./secret.json");
-
+const { mnemonic, infuraKey, maticVigilKey, pk, POLYGON_KEY } = require("./secret.json");
 
 module.exports = {
   networks: {
@@ -43,25 +42,36 @@ module.exports = {
       skipDryRun: true
     },
     matic: {
-      provider: () => new HDWalletProvider(mnemonic, `https://rpc-mainnet.maticvigil.com/v1/${maticVigilKey}`),
+      // provider: function () {
+      //   return new HDWalletProvider({
+      //     privateKeys: [pk],
+      //     providerOrUrl: `https://rpc-dfyn-mainnet.maticvigil.com/v1/4317c87b41879d5bfafb90308aee37d202f8ddf7`,
+      //     chainId: 137
+      //   });
+      // },
+      provider: () => new HDWalletProvider(mnemonic, `https://rpc-dfyn-mainnet.maticvigil.com/v1/4317c87b41879d5bfafb90308aee37d202f8ddf7`),
       network_id: 137,
       confirmations: 2,
       timeoutBlocks: 200,
       skipDryRun: true
     }
   },
-  plugins: [
-    'truffle-plugin-verify'
-  ],
   compilers: {
     solc: {
       version: "0.6.11",
       settings: {
         optimizer: {
-          enabled: true,
-          runs:1500
+          runs: 1000000,
+          enabled: true
         }
       }
     }
+  },
+
+  plugins: [
+    'truffle-plugin-verify'
+  ],
+  api_keys: {
+    etherscan: POLYGON_KEY
   }
 };
