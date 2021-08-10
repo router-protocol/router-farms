@@ -2,8 +2,8 @@ import chai, { expect } from 'chai'
 import { Contract, BigNumber } from 'ethers'
 import { solidity, MockProvider, createFixtureLoader } from 'ethereum-waffle'
 
-import { stakingRewardsFactoryFixture ,stakingRewardsFixture} from './fixtures'
-import { mineBlock, REWARDS_DURATION,expandTo18Decimals } from './utils'
+import { stakingRewardsFactoryFixture, stakingRewardsFixture } from './fixtures'
+import { mineBlock, REWARDS_DURATION, expandTo18Decimals } from './utils'
 
 import StakingRewards from '../build/StakingRewards.json'
 
@@ -17,7 +17,7 @@ describe('StakingRewardsFactory', () => {
       gasLimit: 9999999,
     },
   })
-  const [wallet, wallet1,staker] = provider.getWallets()
+  const [wallet, wallet1, staker] = provider.getWallets()
   const loadFixture = createFixtureLoader([wallet], provider)
 
   let rewardTokens: Contract[]
@@ -45,25 +45,25 @@ describe('StakingRewardsFactory', () => {
 
   describe('#deploy', () => {
     it('pushes the token into the list', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address,rewardTokens[0].address, 10000, REWARDS_DURATION)
+      await stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)
       expect(await stakingRewardsFactory.stakingTokens(0)).to.eq(stakingTokens[1].address)
     })
 
     it('fails if called twice for same token', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address,rewardTokens[0].address, 10000, REWARDS_DURATION)
-      await expect(stakingRewardsFactory.deploy(stakingTokens[1].address,rewardTokens[0].address, 10000, REWARDS_DURATION)).to.revertedWith(
+      await stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)
+      await expect(stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)).to.revertedWith(
         'StakingRewardsFactory::deploy: already deployed'
       )
     })
 
     it('can only be called by the owner', async () => {
-      await expect(stakingRewardsFactory.connect(wallet1).deploy(stakingTokens[1].address,rewardTokens[0].address, 10000, REWARDS_DURATION)).to.be.revertedWith(
+      await expect(stakingRewardsFactory.connect(wallet1).deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)).to.be.revertedWith(
         'Ownable: caller is not the owner'
       )
     })
 
     it('stores the address of stakingRewards and reward amount', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address,rewardTokens[0].address, 10000, REWARDS_DURATION)
+      await stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)
       const [stakingRewards, rewardAmount] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
         stakingTokens[1].address
       )
@@ -72,7 +72,7 @@ describe('StakingRewardsFactory', () => {
     })
 
     it('deployed staking rewards has correct parameters', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address,rewardTokens[0].address, 10000, REWARDS_DURATION)
+      await stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)
       const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
         stakingTokens[1].address
       )
@@ -82,7 +82,7 @@ describe('StakingRewardsFactory', () => {
       expect(await stakingRewards.rewardsToken()).to.eq(rewardTokens[0].address)
     })
 
-    
+
 
 
 
@@ -107,7 +107,7 @@ describe('StakingRewardsFactory', () => {
       beforeEach('deploy staking reward contracts', async () => {
         stakingRewards = []
         for (let i = 0; i < stakingTokens.length; i++) {
-          await stakingRewardsFactory.deploy(stakingTokens[i].address,rewardTokens[0].address, rewardAmounts[i], REWARDS_DURATION)
+          await stakingRewardsFactory.deploy(stakingTokens[i].address, rewardTokens[0].address, rewardAmounts[i], REWARDS_DURATION)
           const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
             stakingTokens[i].address
           )
@@ -181,76 +181,35 @@ describe('StakingRewardsFactory', () => {
       })
     })
 
-      // deploy factory
-    // deploy 2 reward tokens
-    // depoly 2 staking tokens
-    // deploy 2 pools 
-    // transfer reward token to factory
-    // notify reward amount
-    // do stake on both pools
-    // mine block from start to end
-    // trigger clain all
-    // do assert on reward balances
-    describe('#Claim', async () => {
-      // let stakingRewards: Contract[]
-      // beforeEach('deploy staking reward contracts', async () => {
-      //   let totalRewardAmount: BigNumber
-      //   stakingRewards = []
-      //   totalRewardAmount = rewardAmounts.reduce((accumulator, current) => accumulator.add(current), BigNumber.from(0))
-      //   for (let i = 0; i < rewardTokens.length; i++) {
-      //     await stakingRewardsFactory.deploy(stakingTokens[i].address,rewardTokens[i].address, rewardAmounts[i], REWARDS_DURATION)
-      //     const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
-      //       stakingTokens[i].address
-      //     )
-      //     stakingRewards.push(new Contract(stakingRewardsAddress, StakingRewards.abi, provider))
-      //     await rewardTokens[i].transfer(stakingRewardsFactory.address, totalRewardAmount)
 
-      //   await stakingRewardsFactory.notifyRewardAmounts();
-      //   const stake = expandTo18Decimals(2)
-      //   await stakingTokens[i].transfer(staker.address, stake)
-      //   await stakingTokens[i].connect(staker).approve(stakingTokens[i].address, stake)
-      //   await stakingRewards[i].connect(staker).stake(stake)
-      //   }
-      // })
-      const reward = expandTo18Decimals(100)
-      async function start(reward: BigNumber): Promise<{ startTime: BigNumber; endTime: BigNumber }> {
-        // send reward to the contract
-        await rewardTokens[0].transfer(stakingRewards.address, reward)
-        // must be called by rewardsDistribution
-        await stakingRewards.notifyRewardAmount(reward)
-    
-        const startTime: BigNumber = await stakingRewards.lastUpdateTime()
-        const endTime: BigNumber = await stakingRewards.periodFinish()
-        expect(endTime).to.be.eq(startTime.add(REWARDS_DURATION * 24 * 60 * 60))
-        return { startTime, endTime }
-      }
+    describe('#Claim', async () => {
+      const reward = expandTo18Decimals(1)
       it('Check Claim all', async () => {
         let stakingRewards: Contract[]
-        let totalRewardAmount: BigNumber
+        let endTime
         stakingRewards = []
-        totalRewardAmount = rewardAmounts.reduce((accumulator, current) => accumulator.add(current), BigNumber.from(0))
-        for (let i = 0; i < rewardTokens.length; i++) {
-          await stakingRewardsFactory.deploy(stakingTokens[i].address,rewardTokens[i].address,"2000000000000", REWARDS_DURATION)
+        for (let i = 0; i < 2; i++) {
+          await stakingRewardsFactory.deploy(stakingTokens[i].address, rewardTokens[i].address, reward, REWARDS_DURATION)
           const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
             stakingTokens[i].address
           )
           stakingRewards.push(new Contract(stakingRewardsAddress, StakingRewards.abi, provider))
-          await rewardTokens[i].transfer(stakingRewardsFactory.address, totalRewardAmount)
-
-        await stakingRewardsFactory.notifyRewardAmounts();
-        const stake = expandTo18Decimals(2)
-        await stakingTokens[i].transfer(staker.address, stake)
-        await stakingTokens[i].connect(staker).approve(stakingTokens[i].address, stake)
-        await stakingRewards[i].connect(staker).stake(stake)
-        // const { endTime } = await start(reward)
-        // await mineBlock(provider, endTime.add(1).toNumber())
+          await rewardTokens[i].transfer(stakingRewardsFactory.address, reward)
+          const stake = expandTo18Decimals(2)
+          await stakingTokens[i].transfer(staker.address, stake)
+          await stakingTokens[i].connect(staker).approve(stakingRewards[i].address, stake)
+          await stakingRewards[i].connect(staker).stake(stake)
         }
-        
-      await stakingRewardsFactory.connect(staker).claimAll()
-      const reward1=stakingRewards[0].earned(staker.address)
-      const reward2=stakingRewards[1].earned(staker.address)
-      expect(reward1).to.be.eq(0)
-      expect(reward2).to.be.eq(0)
+        await mineBlock(provider, genesis)
+        await stakingRewardsFactory.notifyRewardAmounts();
+        endTime = await stakingRewards[1].periodFinish()
+
+        await mineBlock(provider, endTime.add(10000).toNumber())
+        await stakingRewardsFactory.connect(staker).claimAll()
+        let balance1 = await rewardTokens[0].balanceOf(staker.address)
+        let balance2 = await rewardTokens[1].balanceOf(staker.address)
+        expect(reward.sub(balance1).lte(reward.div(10000))).to.be.true
+        expect(reward.sub(balance2).lte(reward.div(10000))).to.be.true
       })
     })
 
@@ -258,34 +217,3 @@ describe('StakingRewardsFactory', () => {
 
   })
 })
-
-
-
-
-/*
-deploy factory
-deploy 2 reward tokens
-depoly 2 staking tokens
-deploy 2 pools 
-transfer reward token to factory
-notify reward amount
-do stake on both pools
-mine block from start to end
-trigger clain all
-do assert on reward balances
-
-
-deploy route test token
-
-iden usdc-usdt pool & usdt-dai
-
-depoly factory
-
-deploy pools for above lp
-
-rewards cycle 10 days
-
-reward 1 million token in each pool
-
-
-*/
