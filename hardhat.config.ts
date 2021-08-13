@@ -1,4 +1,5 @@
 import "@nomiclabs/hardhat-waffle";
+import "@nomiclabs/hardhat-etherscan";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
@@ -36,6 +37,11 @@ if (!infuraApiKey) {
   throw new Error("Please set your INFURA_API_KEY in a .env file");
 }
 
+const etherscanApiKey: string | undefined = process.env.ETHERSCAN_KEY;
+if (!etherscanApiKey) {
+  throw new Error("Please set your ETHERSCAN_KEY in a .env file");
+}
+
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
   const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
   return {
@@ -70,16 +76,19 @@ const config: HardhatUserConfig = {
     kovan: getChainConfig("kovan"),
     rinkeby: getChainConfig("rinkeby"),
     ropsten: getChainConfig("ropsten"),
-    ganache:{
+    ganache: {
       url: "http://127.0.0.1:7545",
       // accounts: [privateKey1, privateKey2, ...]
-    }
+    },
   },
   paths: {
     artifacts: "./artifacts",
     cache: "./cache",
     sources: "./contracts",
     tests: "./test",
+  },
+  etherscan: {
+    apiKey: etherscanApiKey,
   },
   solidity: {
     version: "0.6.11",

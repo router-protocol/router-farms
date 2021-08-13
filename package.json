@@ -1,10 +1,10 @@
 {
-  "name": "@paulrberg/solidity-template",
-  "description": "Setup for writing Solidity smart contracts",
+  "name": "@router-protocol/router-farms",
   "version": "1.0.0",
-  "author": {
-    "name": "Paul Razvan Berg",
-    "url": "https://paulrberg.com"
+  "author": "router builders",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/router-protocol/router-farms/"
   },
   "devDependencies": {
     "@codechecks/client": "^0.1.11",
@@ -16,6 +16,7 @@
     "@ethersproject/bytes": "^5.4.0",
     "@ethersproject/providers": "^5.4.3",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.4",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@typechain/ethers-v5": "^7.0.1",
     "@typechain/hardhat": "^2.3.0",
