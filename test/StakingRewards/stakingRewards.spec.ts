@@ -1,11 +1,9 @@
 import chai, { expect } from 'chai'
 import { Contract, BigNumber } from 'ethers'
 import { solidity, MockProvider, createFixtureLoader } from 'ethereum-waffle'
-
-import { stakingRewardsFactoryFixture, stakingRewardsFixture } from './fixtures'
-import { mineBlock, REWARDS_DURATION, expandTo18Decimals } from './utils'
-
-import StakingRewards from '../build/StakingRewards.json'
+import { stakingRewardsFactoryFixture, stakingRewardsFixture } from '../fixtures'
+import { mineBlock, REWARDS_DURATION, expandTo18Decimals } from '../utils'
+import StakingRewards from '../../artifacts/contracts/StakingRewards.sol/StakingRewards.json'
 
 chai.use(solidity)
 
@@ -40,7 +38,7 @@ describe('StakingRewardsFactory', () => {
 
   it('deployment gas', async () => {
     const receipt = await provider.getTransactionReceipt(stakingRewardsFactory.deployTransaction.hash)
-    expect(receipt.gasUsed).to.eq('3610427')
+    expect(receipt.gasUsed).to.eq('2986192')
   })
 
   describe('#deploy', () => {
@@ -120,7 +118,7 @@ describe('StakingRewardsFactory', () => {
         await mineBlock(provider, genesis)
         const tx = await stakingRewardsFactory.notifyRewardAmounts()
         const receipt = await tx.wait()
-        expect(receipt.gasUsed).to.eq('417047')
+        expect(receipt.gasUsed).to.eq('417839')
       })
 
       it('no op if called twice', async () => {
@@ -212,8 +210,5 @@ describe('StakingRewardsFactory', () => {
         expect(reward.sub(balance2).lte(reward.div(10000))).to.be.true
       })
     })
-
-
-
   })
 })
