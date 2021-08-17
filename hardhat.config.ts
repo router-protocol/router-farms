@@ -24,6 +24,8 @@ const chainIds = {
   mainnet: 1,
   rinkeby: 4,
   ropsten: 3,
+  polygon:137,
+  mumbai:80001
 };
 
 // Ensure that we have all the environment variables we need.
@@ -43,12 +45,21 @@ if (!etherscanApiKey) {
 }
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
-  const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
+  let url=''
+  url = "https://" + network + ".infura.io/v3/" + infuraApiKey;
+  if(network=="polygon"){
+    url= "https://rpc-mainnet.matic.network";
+  }
+  if(network=="mumbai"){
+    url= "https://rpc-mumbai.matic.today";
+  }
+ 
   return {
     accounts: {
       count: 10,
       mnemonic,
       path: "m/44'/60'/0'/0",
+      initialIndex:2,
     },
     chainId: chainIds[network],
     url,
@@ -80,6 +91,8 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:7545",
       // accounts: [privateKey1, privateKey2, ...]
     },
+    polygon:getChainConfig("polygon"),
+    mumbai:getChainConfig("mumbai"),
   },
   paths: {
     artifacts: "./artifacts",
@@ -102,7 +115,7 @@ const config: HardhatUserConfig = {
       // https://hardhat.org/hardhat-network/#solidity-optimizer-support
       optimizer: {
         enabled: true,
-        runs: 800,
+        runs: 1000000,
       },
     },
   },

@@ -74,7 +74,7 @@
     "deployerc20": "hardhat deploy:TestERC20",
     "deployfactory": "hardhat deploy:RewardFactory",
     "notifyrewards": "hardhat NotifyRewards",
-    "deploypool": "hardhat deploy:POOL",
+    "deploypool": "hardhat deploy:Pool",
     "stake": "hardhat stake",
     "lint": "yarn run lint:sol && yarn run lint:ts && yarn run prettier:check",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
