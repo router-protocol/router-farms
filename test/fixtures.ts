@@ -1,3 +1,20 @@
+// import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+// import { Fixture } from "ethereum-waffle";
+
+// import { Greeter } from "../typechain/Greeter";
+
+// declare module "mocha" {
+//   export interface Context {
+//     greeter: Greeter;
+//     loadFixture: <T>(fixture: Fixture<T>) => Promise<T>;
+//     signers: Signers;
+//   }
+// }
+
+// export interface Signers {
+//   admin: SignerWithAddress;
+// }
+
 import chai from 'chai'
 import { Contract, Wallet, BigNumber, providers } from 'ethers'
 import { solidity, deployContract } from 'ethereum-waffle'
@@ -5,9 +22,9 @@ import { solidity, deployContract } from 'ethereum-waffle'
 import { expandTo18Decimals, REWARDS_DURATION } from './utils'
 
 import UniswapV2ERC20 from '@uniswap/v2-core/build/ERC20.json'
-import TestERC20 from '../build/TestERC20.json'
-import StakingRewards from '../build/StakingRewards.json'
-import StakingRewardsFactory from '../build/StakingRewardsFactory.json'
+import TestERC20 from '../artifacts/contracts/test/TestERC20.sol/TestERC20.json'
+import StakingRewards from '../artifacts/contracts/StakingRewards.sol/StakingRewards.json'
+import StakingRewardsFactory from '../artifacts/contracts/StakingRewardsFactory.sol/StakingRewardsFactory.json'
 
 chai.use(solidity)
 
@@ -67,3 +84,4 @@ export async function stakingRewardsFactoryFixture(
 
   return { rewardTokens, stakingTokens, genesis, rewardAmounts, stakingRewardsFactory }
 }
+
