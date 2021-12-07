@@ -1,214 +1,203 @@
-import chai, { expect } from 'chai'
-import { Contract, BigNumber } from 'ethers'
-import { solidity, MockProvider, createFixtureLoader } from 'ethereum-waffle'
-import { stakingRewardsFactoryFixture, stakingRewardsFixture } from '../fixtures'
-import { mineBlock, REWARDS_DURATION, expandTo18Decimals } from '../utils'
-import StakingRewards from '../../artifacts/contracts/StakingRewards.sol/StakingRewards.json'
+import chai, { expect } from "chai";
+import { Contract, BigNumber, constants } from "ethers";
+import { solidity, MockProvider, createFixtureLoader, deployContract } from "ethereum-waffle";
+import { ecsign } from "ethereumjs-util";
 
-chai.use(solidity)
+import { stakingRewardsFixture } from "../fixtures";
+import { REWARDS_DURATION, expandTo18Decimals, mineBlock, getApprovalDigest } from "../utils";
 
-describe('StakingRewardsFactory', () => {
+import StakingRewards from "../../artifacts/contracts/StakingRewards.sol/StakingRewards.json";
+
+chai.use(solidity);
+
+describe("StakingRewards", () => {
   const provider = new MockProvider({
     ganacheOptions: {
-      hardfork: 'istanbul',
-      mnemonic: 'horn horn horn horn horn horn horn horn horn horn horn horn',
+      hardfork: "istanbul",
+      mnemonic: "horn horn horn horn horn horn horn horn horn horn horn horn",
       gasLimit: 9999999,
     },
-  })
-  const [wallet, wallet1, staker] = provider.getWallets()
-  const loadFixture = createFixtureLoader([wallet], provider)
+  });
+  const [wallet, staker, secondStaker] = provider.getWallets();
+  const loadFixture = createFixtureLoader([wallet], provider);
 
-  let rewardTokens: Contract[]
-  let genesis: number
-  let rewardAmounts: BigNumber[]
-  let stakingRewardsFactory: Contract
-  let stakingTokens: Contract[]
-  let totalRewardAmount: BigNumber
-  let stakingRewards: Contract
-  beforeEach('load fixture', async () => {
-    const fixture = await loadFixture(stakingRewardsFactoryFixture)
-    const fixture1 = await loadFixture(stakingRewardsFixture)
-    rewardTokens = fixture.rewardTokens
-    genesis = fixture.genesis
-    rewardAmounts = fixture.rewardAmounts
-    stakingRewardsFactory = fixture.stakingRewardsFactory
-    stakingTokens = fixture.stakingTokens
-    stakingRewards = fixture1.stakingRewards
-  })
+  let stakingRewards: Contract;
+  let rewardsToken: Contract;
+  let stakingToken: Contract;
+  beforeEach(async () => {
+    const fixture = await loadFixture(stakingRewardsFixture);
+    stakingRewards = fixture.stakingRewards;
+    rewardsToken = fixture.rewardsToken;
+    stakingToken = fixture.stakingToken;
+  });
 
-  it('deployment gas', async () => {
-    const receipt = await provider.getTransactionReceipt(stakingRewardsFactory.deployTransaction.hash)
-    expect(receipt.gasUsed).to.eq('2986192')
-  })
+  it("deploy cost", async () => {
+    const stakingRewards = await deployContract(wallet, StakingRewards, [
+      wallet.address,
+      rewardsToken.address,
+      stakingToken.address,
+      REWARDS_DURATION,
+    ]);
+    const receipt = await provider.getTransactionReceipt(stakingRewards.deployTransaction.hash);
+    expect(receipt.gasUsed).to.eq("2500714");
+  });
 
-  describe('#deploy', () => {
-    it('pushes the token into the list', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)
-      expect(await stakingRewardsFactory.stakingTokens(0)).to.eq(stakingTokens[1].address)
-    })
+  it("rewardsDuration", async () => {
+    const rewardsDuration = await stakingRewards.rewardsDuration();
+    expect(rewardsDuration).to.be.eq(REWARDS_DURATION * 60 * 60 * 24);
+  });
 
-    it('fails if called twice for same token', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)
-      await expect(stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)).to.revertedWith(
-        'StakingRewardsFactory::deploy: already deployed'
-      )
-    })
+  const reward = expandTo18Decimals(100);
+  async function start(reward: BigNumber): Promise<{ startTime: BigNumber; endTime: BigNumber }> {
+    // send reward to the contract
+    await rewardsToken.transfer(stakingRewards.address, reward);
+    // must be called by rewardsDistribution
+    await stakingRewards.notifyRewardAmount(reward);
 
-    it('can only be called by the owner', async () => {
-      await expect(stakingRewardsFactory.connect(wallet1).deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)).to.be.revertedWith(
-        'Ownable: caller is not the owner'
-      )
-    })
+    const startTime: BigNumber = await stakingRewards.lastUpdateTime();
+    const endTime: BigNumber = await stakingRewards.periodFinish();
+    expect(endTime).to.be.eq(startTime.add(REWARDS_DURATION * 24 * 60 * 60));
+    return { startTime, endTime };
+  }
 
-    it('stores the address of stakingRewards and reward amount', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)
-      const [stakingRewards, rewardAmount] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
-        stakingTokens[1].address
-      )
-      expect(await provider.getCode(stakingRewards)).to.not.eq('0x')
-      expect(rewardAmount).to.eq(10000)
-    })
+  it("notifyRewardAmount: full", async () => {
+    // stake with staker
+    const stake = expandTo18Decimals(2);
+    await stakingToken.transfer(staker.address, stake);
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake);
+    await stakingRewards.connect(staker).stake(stake);
 
-    it('deployed staking rewards has correct parameters', async () => {
-      await stakingRewardsFactory.deploy(stakingTokens[1].address, rewardTokens[0].address, 10000, REWARDS_DURATION)
-      const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
-        stakingTokens[1].address
-      )
-      const stakingRewards = new Contract(stakingRewardsAddress, StakingRewards.abi, provider)
-      expect(await stakingRewards.rewardsDistribution()).to.eq(stakingRewardsFactory.address)
-      expect(await stakingRewards.stakingToken()).to.eq(stakingTokens[1].address)
-      expect(await stakingRewards.rewardsToken()).to.eq(rewardTokens[0].address)
-    })
+    const { endTime } = await start(reward);
 
+    // fast-forward past the reward window
+    await mineBlock(provider, endTime.add(1).toNumber());
 
+    // unstake
+    await stakingRewards.connect(staker).exit();
+    const stakeEndTime: BigNumber = await stakingRewards.lastUpdateTime();
+    expect(stakeEndTime).to.be.eq(endTime);
 
+    const rewardAmount = await rewardsToken.balanceOf(staker.address);
+    expect(reward.sub(rewardAmount).lte(reward.div(10000))).to.be.true; // ensure result is within .01%
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION * 24 * 60 * 60).mul(REWARDS_DURATION * 24 * 60 * 60));
+  });
 
+  it("stakeWithPermit", async () => {
+    // stake with staker
+    const stake = expandTo18Decimals(2);
+    await stakingToken.transfer(staker.address, stake);
 
+    // get permit
+    const nonce = await stakingToken.nonces(staker.address);
+    const deadline = constants.MaxUint256;
+    const digest = await getApprovalDigest(
+      stakingToken,
+      { owner: staker.address, spender: stakingRewards.address, value: stake },
+      nonce,
+      deadline,
+    );
+    const { v, r, s } = ecsign(Buffer.from(digest.slice(2), "hex"), Buffer.from(staker.privateKey.slice(2), "hex"));
 
-  })
+    await stakingRewards.connect(staker).stakeWithPermit(stake, deadline, v, r, s);
 
-  describe('#notifyRewardsAmounts', () => {
-    let totalRewardAmount: BigNumber
+    const { endTime } = await start(reward);
 
-    beforeEach(() => {
-      totalRewardAmount = rewardAmounts.reduce((accumulator, current) => accumulator.add(current), BigNumber.from(0))
-    })
+    // fast-forward past the reward window
+    await mineBlock(provider, endTime.add(1).toNumber());
 
-    it('called before any deploys', async () => {
-      await expect(stakingRewardsFactory.notifyRewardAmounts()).to.be.revertedWith(
-        'StakingRewardsFactory::notifyRewardAmounts: called before any deploys'
-      )
-    })
+    // unstake
+    await stakingRewards.connect(staker).exit();
+    const stakeEndTime: BigNumber = await stakingRewards.lastUpdateTime();
+    expect(stakeEndTime).to.be.eq(endTime);
 
-    describe('after deploying all staking reward contracts', async () => {
-      let stakingRewards: Contract[]
-      beforeEach('deploy staking reward contracts', async () => {
-        stakingRewards = []
-        for (let i = 0; i < stakingTokens.length; i++) {
-          await stakingRewardsFactory.deploy(stakingTokens[i].address, rewardTokens[0].address, rewardAmounts[i], REWARDS_DURATION)
-          const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
-            stakingTokens[i].address
-          )
-          stakingRewards.push(new Contract(stakingRewardsAddress, StakingRewards.abi, provider))
-        }
-      })
+    const rewardAmount = await rewardsToken.balanceOf(staker.address);
+    expect(reward.sub(rewardAmount).lte(reward.div(10000))).to.be.true; // ensure result is within .01%
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION * 24 * 60 * 60).mul(REWARDS_DURATION * 24 * 60 * 60));
+  });
 
-      it('gas', async () => {
-        await rewardTokens[0].transfer(stakingRewardsFactory.address, totalRewardAmount)
-        await mineBlock(provider, genesis)
-        const tx = await stakingRewardsFactory.notifyRewardAmounts()
-        const receipt = await tx.wait()
-        expect(receipt.gasUsed).to.eq('417839')
-      })
+  it("notifyRewardAmount: ~half", async () => {
+    const { startTime, endTime } = await start(reward);
 
-      it('no op if called twice', async () => {
-        await rewardTokens[0].transfer(stakingRewardsFactory.address, totalRewardAmount)
-        await mineBlock(provider, genesis)
-        await expect(stakingRewardsFactory.notifyRewardAmounts()).to.emit(rewardTokens[0], 'Transfer')
-        await expect(stakingRewardsFactory.notifyRewardAmounts()).to.not.emit(rewardTokens[0], 'Transfer')
-      })
+    // fast-forward ~halfway through the reward window
+    await mineBlock(provider, startTime.add(endTime.sub(startTime).div(2)).toNumber());
 
-      it('fails if called without sufficient balance', async () => {
-        await mineBlock(provider, genesis)
-        await expect(stakingRewardsFactory.notifyRewardAmounts()).to.be.revertedWith(
-          'ERC20: transfer amount exceeds balance' // emitted from rewards token
-        )
-      })
+    // stake with staker
+    const stake = expandTo18Decimals(2);
+    await stakingToken.transfer(staker.address, stake);
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake);
+    await stakingRewards.connect(staker).stake(stake);
+    const stakeStartTime: BigNumber = await stakingRewards.lastUpdateTime();
 
-      it('calls notifyRewards on each contract', async () => {
-        await rewardTokens[0].transfer(stakingRewardsFactory.address, totalRewardAmount)
-        await mineBlock(provider, genesis)
-        await expect(stakingRewardsFactory.notifyRewardAmounts())
-          .to.emit(stakingRewards[0], 'RewardAdded')
-          .withArgs(rewardAmounts[0])
-          .to.emit(stakingRewards[1], 'RewardAdded')
-          .withArgs(rewardAmounts[1])
-          .to.emit(stakingRewards[2], 'RewardAdded')
-          .withArgs(rewardAmounts[2])
-          .to.emit(stakingRewards[3], 'RewardAdded')
-          .withArgs(rewardAmounts[3])
-      })
+    // fast-forward past the reward window
+    await mineBlock(provider, endTime.add(1).toNumber());
 
-      it('transfers the reward tokens to the individual contracts', async () => {
-        await rewardTokens[0].transfer(stakingRewardsFactory.address, totalRewardAmount)
-        await mineBlock(provider, genesis)
-        await stakingRewardsFactory.notifyRewardAmounts()
-        for (let i = 0; i < rewardAmounts.length; i++) {
-          expect(await rewardTokens[0].balanceOf(stakingRewards[i].address)).to.eq(rewardAmounts[i])
-        }
-      })
+    // unstake
+    await stakingRewards.connect(staker).exit();
+    const stakeEndTime: BigNumber = await stakingRewards.lastUpdateTime();
+    expect(stakeEndTime).to.be.eq(endTime);
 
-      it('sets rewardAmount to 0', async () => {
-        await rewardTokens[0].transfer(stakingRewardsFactory.address, totalRewardAmount)
-        await mineBlock(provider, genesis)
-        for (let i = 0; i < stakingTokens.length; i++) {
-          const [, amount] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(stakingTokens[i].address)
-          expect(amount).to.eq(rewardAmounts[i])
-        }
-        await stakingRewardsFactory.notifyRewardAmounts()
-        for (let i = 0; i < stakingTokens.length; i++) {
-          const [, amount] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(stakingTokens[i].address)
-          expect(amount).to.eq(0)
-        }
-      })
+    const rewardAmount = await rewardsToken.balanceOf(staker.address);
+    expect(reward.div(2).sub(rewardAmount).lte(reward.div(2).div(10000))).to.be.true; // ensure result is within .01%
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION * 24 * 60 * 60).mul(endTime.sub(stakeStartTime)));
+  }).retries(2); // TODO investigate flakiness
 
-      it('succeeds when has sufficient balance and after genesis time', async () => {
-        await rewardTokens[0].transfer(stakingRewardsFactory.address, totalRewardAmount)
-        await mineBlock(provider, genesis)
-        await stakingRewardsFactory.notifyRewardAmounts()
-      })
-    })
+  it("notifyRewardAmount: two stakers", async () => {
+    // stake with first staker
+    const stake = expandTo18Decimals(2);
+    await stakingToken.transfer(staker.address, stake);
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake);
+    await stakingRewards.connect(staker).stake(stake);
 
+    const { startTime, endTime } = await start(reward);
 
-    describe('#Claim', async () => {
-      const reward = expandTo18Decimals(1)
-      it('Check Claim all', async () => {
-        let stakingRewards: Contract[]
-        let endTime
-        stakingRewards = []
-        for (let i = 0; i < 2; i++) {
-          await stakingRewardsFactory.deploy(stakingTokens[i].address, rewardTokens[i].address, reward, REWARDS_DURATION)
-          const [stakingRewardsAddress] = await stakingRewardsFactory.stakingRewardsInfoByStakingToken(
-            stakingTokens[i].address
-          )
-          stakingRewards.push(new Contract(stakingRewardsAddress, StakingRewards.abi, provider))
-          await rewardTokens[i].transfer(stakingRewardsFactory.address, reward)
-          const stake = expandTo18Decimals(2)
-          await stakingTokens[i].transfer(staker.address, stake)
-          await stakingTokens[i].connect(staker).approve(stakingRewards[i].address, stake)
-          await stakingRewards[i].connect(staker).stake(stake)
-        }
-        await mineBlock(provider, genesis)
-        await stakingRewardsFactory.notifyRewardAmounts();
-        endTime = await stakingRewards[1].periodFinish()
+    // fast-forward ~halfway through the reward window
+    await mineBlock(provider, startTime.add(endTime.sub(startTime).div(2)).toNumber());
 
-        await mineBlock(provider, endTime.add(10000).toNumber())
-        await stakingRewardsFactory.connect(staker).claimAll()
-        let balance1 = await rewardTokens[0].balanceOf(staker.address)
-        let balance2 = await rewardTokens[1].balanceOf(staker.address)
-        expect(reward.sub(balance1).lte(reward.div(10000))).to.be.true
-        expect(reward.sub(balance2).lte(reward.div(10000))).to.be.true
-      })
-    })
-  })
-})
+    // stake with second staker
+    await stakingToken.transfer(secondStaker.address, stake);
+    await stakingToken.connect(secondStaker).approve(stakingRewards.address, stake);
+    await stakingRewards.connect(secondStaker).stake(stake);
+
+    // fast-forward past the reward window
+    await mineBlock(provider, endTime.add(1).toNumber());
+
+    // unstake
+    await stakingRewards.connect(staker).exit();
+    const stakeEndTime: BigNumber = await stakingRewards.lastUpdateTime();
+    expect(stakeEndTime).to.be.eq(endTime);
+    await stakingRewards.connect(secondStaker).exit();
+
+    const rewardAmount = await rewardsToken.balanceOf(staker.address);
+    const secondRewardAmount = await rewardsToken.balanceOf(secondStaker.address);
+    const totalReward = rewardAmount.add(secondRewardAmount);
+
+    // ensure results are within .01%
+    expect(reward.sub(totalReward).lte(reward.div(10000))).to.be.true;
+    expect(totalReward.mul(3).div(4).sub(rewardAmount).lte(totalReward.mul(3).div(4).div(10000)));
+    expect(totalReward.div(4).sub(secondRewardAmount).lte(totalReward.div(4).div(10000)));
+  });
+
+  it("check farm renewal", async () => {
+    const { startTime, endTime } = await start(reward);
+    const rewardBalance = await rewardsToken.balanceOf(stakingRewards.address);
+    console.log(rewardBalance.toString());
+    const periodFinish = await stakingRewards.periodFinish();
+    console.log(periodFinish.toString());
+    const initialRewardRate = await stakingRewards.rewardRate();
+    expect(initialRewardRate).to.be.equal(rewardBalance.div(REWARDS_DURATION * 24 * 60 * 60));
+    await mineBlock(provider, endTime.sub(9).toNumber());
+    await start(reward);
+    const newrewardBalance = await rewardsToken.balanceOf(stakingRewards.address);
+    console.log(newrewardBalance.toString());
+    const newPeriodFinish = await stakingRewards.periodFinish();
+    console.log(newPeriodFinish.toString());
+    const newRewardRate = await stakingRewards.rewardRate();
+    expect(newPeriodFinish).to.be.equal(endTime.sub(9).add(REWARDS_DURATION * 24 * 60 * 60));
+    expect(newRewardRate).to.be.equal(
+      initialRewardRate
+        .mul(endTime.sub(endTime.sub(9)))
+        .add(reward)
+        .div(REWARDS_DURATION * 24 * 60 * 60),
+    );
+  });
+});
