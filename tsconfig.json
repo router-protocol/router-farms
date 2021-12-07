@@ -5,11 +5,11 @@
     "lib": ["es6"],
     "module": "commonjs",
     "moduleResolution": "node",
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "outDir": "dist",
     "resolveJsonModule": true,
     "sourceMap": true,
-    "strict": true,
+    "strict": false,
     "target": "es6"
   },
   "exclude": ["node_modules"],
