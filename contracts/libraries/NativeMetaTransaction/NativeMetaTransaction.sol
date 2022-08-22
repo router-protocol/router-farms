@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.11;
+pragma solidity >=0.8.16;
 
-import '@openzeppelin/contracts/math/SafeMath.sol';
-import './EIP712Base.sol';
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./EIP712Base.sol";
 
 contract NativeMetaTransaction is EIP712Base {
     using SafeMath for uint256;
     bytes32 private constant META_TRANSACTION_TYPEHASH =
-        keccak256(bytes('MetaTransaction(uint256 nonce,address from,bytes functionSignature)'));
+        keccak256(bytes("MetaTransaction(uint256 nonce,address from,bytes functionSignature)"));
     event MetaTransactionExecuted(address userAddress, address payable relayerAddress, bytes functionSignature);
     mapping(address => uint256) nonces;
 
@@ -30,19 +30,22 @@ contract NativeMetaTransaction is EIP712Base {
         bytes32 sigS,
         uint8 sigV
     ) public payable returns (bytes memory) {
-        MetaTransaction memory metaTx =
-            MetaTransaction({nonce: nonces[userAddress], from: userAddress, functionSignature: functionSignature});
+        MetaTransaction memory metaTx = MetaTransaction({
+            nonce: nonces[userAddress],
+            from: userAddress,
+            functionSignature: functionSignature
+        });
 
-        require(verify(userAddress, metaTx, sigR, sigS, sigV), 'Signer and signature do not match');
+        require(verify(userAddress, metaTx, sigR, sigS, sigV), "Signer and signature do not match");
 
         // increase nonce for user (to avoid re-use)
         nonces[userAddress] = nonces[userAddress].add(1);
 
-        emit MetaTransactionExecuted(userAddress, msg.sender, functionSignature);
+        emit MetaTransactionExecuted(userAddress, payable(msg.sender), functionSignature);
 
         // Append userAddress and relayer address at the end to extract it from calling context
         (bool success, bytes memory returnData) = address(this).call(abi.encodePacked(functionSignature, userAddress));
-        require(success, 'Function call not successful');
+        require(success, "Function call not successful");
 
         return returnData;
     }
@@ -65,7 +68,7 @@ contract NativeMetaTransaction is EIP712Base {
         bytes32 sigS,
         uint8 sigV
     ) internal view returns (bool) {
-        require(signer != address(0), 'NativeMetaTransaction: INVALID_SIGNER');
+        require(signer != address(0), "NativeMetaTransaction: INVALID_SIGNER");
         return signer == ecrecover(toTypedMessageHash(hashMetaTransaction(metaTx)), sigV, sigR, sigS);
     }
 
@@ -78,7 +81,7 @@ contract NativeMetaTransaction is EIP712Base {
                 sender := and(mload(add(array, index)), 0xffffffffffffffffffffffffffffffffffffffff)
             }
         } else {
-            sender = msg.sender;
+            sender = payable(msg.sender);
         }
         return sender;
     }

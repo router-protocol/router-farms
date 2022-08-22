@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.11;
+pragma solidity >=0.8.16;
 
-import {Initializable} from './Initializable.sol';
+import { Initializable } from "./Initializable.sol";
 
 contract EIP712Base is Initializable {
     struct EIP712Domain {
@@ -12,10 +12,10 @@ contract EIP712Base is Initializable {
         bytes32 salt;
     }
 
-    string public constant ERC712_VERSION = '1';
+    string public constant ERC712_VERSION = "1";
 
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
-        keccak256(bytes('EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)'));
+        keccak256(bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"));
     bytes32 internal domainSeperator;
 
     // supposed to be called once while initializing.
@@ -41,7 +41,7 @@ contract EIP712Base is Initializable {
         return domainSeperator;
     }
 
-    function getChainId() public pure returns (uint256) {
+    function getChainId() public view returns (uint256) {
         uint256 id;
         assembly {
             id := chainid()
@@ -57,6 +57,6 @@ contract EIP712Base is Initializable {
      * "\\x01" is the version byte to make it compatible to EIP-191
      */
     function toTypedMessageHash(bytes32 messageHash) internal view returns (bytes32) {
-        return keccak256(abi.encodePacked('\x19\x01', getDomainSeperator(), messageHash));
+        return keccak256(abi.encodePacked("\x19\x01", getDomainSeperator(), messageHash));
     }
 }
