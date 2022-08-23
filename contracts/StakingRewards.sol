@@ -26,6 +26,7 @@ contract StakingRewards is IStakingRewards, EIP712Base, ReentrancyGuard, Ownable
     uint256 public rewardsDuration;
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored;
+    address public rewardVault;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -38,10 +39,12 @@ contract StakingRewards is IStakingRewards, EIP712Base, ReentrancyGuard, Ownable
     constructor(
         address _rewardsToken,
         address _stakingToken,
+        address _rewardVault,
         uint256 _rewardsDuration
     ) {
         rewardsToken = IERC20(_rewardsToken);
         stakingToken = IERC20(_stakingToken);
+        rewardVault = _rewardVault;
         // rewardsDistribution = _rewardsDistribution;
         rewardsDuration = _rewardsDuration.mul(1 days);
 
@@ -123,7 +126,7 @@ contract StakingRewards is IStakingRewards, EIP712Base, ReentrancyGuard, Ownable
         uint256 reward = rewards[_msgSender()];
         if (reward > 0) {
             rewards[_msgSender()] = 0;
-            rewardsToken.safeTransfer(_msgSender(), reward);
+            rewardsToken.safeTransferFrom(rewardVault, _msgSender(), reward);
             emit RewardPaid(_msgSender(), reward);
         }
     }
@@ -132,7 +135,7 @@ contract StakingRewards is IStakingRewards, EIP712Base, ReentrancyGuard, Ownable
         uint256 reward = rewards[account];
         if (reward > 0) {
             rewards[account] = 0;
-            rewardsToken.safeTransfer(account, reward);
+            rewardsToken.safeTransferFrom(rewardVault, account, reward);
             emit RewardPaid(account, reward);
         }
     }
@@ -153,11 +156,11 @@ contract StakingRewards is IStakingRewards, EIP712Base, ReentrancyGuard, Ownable
             rewardRate = reward.add(leftover).div(rewardsDuration);
         }
 
-        // Ensure the provided reward amount is not more than the balance in the contract.
+        // Ensure the provided reward amount is not more than the balance in the rewardVault contract.
         // This keeps the reward rate in the right range, preventing overflows due to
         // very high values of rewardRate in the earned and rewardsPerToken functions;
         // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        uint256 balance = rewardsToken.balanceOf(address(this));
+        uint256 balance = rewardsToken.balanceOf(rewardVault);
         require(rewardRate <= balance.div(rewardsDuration), "Provided reward too high");
 
         lastUpdateTime = block.timestamp;

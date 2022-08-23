@@ -16,7 +16,7 @@
 // }
 
 import chai from "chai";
-import { Contract, Wallet, BigNumber, providers } from "ethers";
+import { Contract, Wallet } from "ethers";
 import { solidity, deployContract } from "ethereum-waffle";
 
 import { expandTo18Decimals, REWARDS_DURATION } from "./utils";
@@ -24,7 +24,8 @@ import { expandTo18Decimals, REWARDS_DURATION } from "./utils";
 import UniswapV2ERC20 from "@uniswap/v2-core/build/ERC20.json";
 import TestERC20 from "../artifacts/contracts/test/TestERC20.sol/TestERC20.json";
 import StakingRewards from "../artifacts/contracts/StakingRewards.sol/StakingRewards.json";
-import StakingRewardsFactory from "../artifacts/contracts/StakingRewards.sol/StakingRewards.json";
+import RewardVault from "../artifacts/contracts/RewardVault.sol/RewardVault.json";
+//import StakingRewardsFactory from "../artifacts/contracts/StakingRewards.sol/StakingRewards.json";
 
 chai.use(solidity);
 
@@ -34,6 +35,7 @@ const NUMBER_OF_REWARD_TOKENS = 2;
 interface StakingRewardsFixture {
   stakingRewards: Contract;
   rewardsToken: Contract;
+  rewardVault: Contract;
   stakingToken: Contract;
 }
 
@@ -41,24 +43,25 @@ export async function stakingRewardsFixture([wallet]: Wallet[]): Promise<Staking
   // const rewardsDistribution = wallet.address
   const rewardsToken = await deployContract(wallet, TestERC20, [expandTo18Decimals(1000000)]);
   const stakingToken = await deployContract(wallet, UniswapV2ERC20, [expandTo18Decimals(1000000)]);
-
+  const rewardVault = await deployContract(wallet, RewardVault, [rewardsToken.address]);
   const stakingRewards = await deployContract(wallet, StakingRewards, [
     rewardsToken.address,
     stakingToken.address,
+    rewardVault.address,
     REWARDS_DURATION,
   ]);
 
-  return { stakingRewards, rewardsToken, stakingToken };
+  return { stakingRewards, rewardsToken, rewardVault, stakingToken };
 }
 
-interface StakingRewardsFactoryFixture {
+/*interface StakingRewardsFactoryFixture {
   rewardTokens: Contract[];
   stakingTokens: Contract[];
   genesis: number;
   rewardAmounts: BigNumber[];
   stakingRewardsFactory: Contract;
 }
-
+*/
 // export async function stakingRewardsFactoryFixture(
 //   [wallet]: Wallet[],
 //   provider: providers.Web3Provider

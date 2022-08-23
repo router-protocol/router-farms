@@ -15,6 +15,7 @@ task("deploy:TestERC20").setAction(async function (taskArguments: TaskArguments,
   // await testERC20.transfer("",ethers.utils.parseEther("100"));
 });
 
+/*
 task("deploy:StakingReward").setAction(async function (taskArguments: TaskArguments, { ethers }) {
   const stakingRewardsFactory: StakingRewards__factory = await ethers.getContractFactory("StakingRewards");
   const factoryContract: StakingRewards = <StakingRewards>(
@@ -27,6 +28,7 @@ task("deploy:StakingReward").setAction(async function (taskArguments: TaskArgume
   await factoryContract.deployed();
   console.log("REWARD FACTORY deployed to: ", factoryContract.address);
 });
+*/
 
 task("NotifyRewards").setAction(async function (taskArguments: TaskArguments, { ethers }) {
   const stakingRewardsFactory: StakingRewards__factory = await ethers.getContractFactory("StakingRewards");
@@ -35,14 +37,14 @@ task("NotifyRewards").setAction(async function (taskArguments: TaskArguments, { 
   );
   console.log("hello world");
   try {
-    let tx = await factoryContract.notifyRewardAmount("1000000000000000000000");
+    const tx = await factoryContract.notifyRewardAmount("1000000000000000000000");
     tx.wait(2);
   } catch (e) {
     console.log("error", e);
   }
 });
 
-task("stake").setAction(async function (taskArguments: TaskArguments, { ethers }) {
+/*task("stake").setAction(async function (taskArguments: TaskArguments, { ethers }) {
   const stakingRewards: StakingRewards__factory = await ethers.getContractFactory("StakingRewards");
   const stakingRewardsContract: StakingRewards = <StakingRewards>(
     await stakingRewards.attach("0xbc32c88C622b94503848009cd7a825998BbfF841")
@@ -52,3 +54,4 @@ task("stake").setAction(async function (taskArguments: TaskArguments, { ethers }
   const rewards = await stakingRewardsContract.earned("0x50C8B3412E89f87A16ae27aCe63c861573d2376b");
   console.log("REWARDS ADDRESS", rewards.toString());
 });
+*/

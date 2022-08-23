@@ -22,17 +22,20 @@ describe("StakingRewards", () => {
   let stakingRewards: Contract;
   let rewardsToken: Contract;
   let stakingToken: Contract;
+  let rewardVault: Contract;
   beforeEach(async () => {
     const fixture = await loadFixture(stakingRewardsFixture);
     stakingRewards = fixture.stakingRewards;
     rewardsToken = fixture.rewardsToken;
     stakingToken = fixture.stakingToken;
+    rewardVault = fixture.rewardVault;
   });
 
   it("deploy cost", async () => {
     const stakingRewards = await deployContract(wallet, StakingRewards, [
       rewardsToken.address,
       stakingToken.address,
+      rewardVault.address,
       REWARDS_DURATION,
     ]);
     const receipt = await provider.getTransactionReceipt(stakingRewards.deployTransaction.hash);
@@ -46,8 +49,16 @@ describe("StakingRewards", () => {
 
   const reward = expandTo18Decimals(100);
   async function start(reward: BigNumber): Promise<{ startTime: BigNumber; endTime: BigNumber }> {
-    // send reward to the contract
-    await rewardsToken.transfer(stakingRewards.address, reward);
+    //Approval to reward Vault
+    await rewardsToken.connect(wallet).approve(rewardVault.address, reward);
+
+    //Add funds to reward Vault
+    await rewardVault.addRewards(reward);
+
+    //Increase Allowance of staking contract
+    await rewardVault.increaseAllowance(stakingRewards.address, reward);
+
+    //await rewardsToken.transfer(stakingRewards.address, reward);
     // must be called by rewardsDistribution
     await stakingRewards.notifyRewardAmount(reward);
 
