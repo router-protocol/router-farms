@@ -15,43 +15,51 @@ task("deploy:TestERC20").setAction(async function (taskArguments: TaskArguments,
   // await testERC20.transfer("",ethers.utils.parseEther("100"));
 });
 
-/*
-task("deploy:StakingReward").setAction(async function (taskArguments: TaskArguments, { ethers }) {
-  const stakingRewardsFactory: StakingRewards__factory = await ethers.getContractFactory("StakingRewards");
-  const factoryContract: StakingRewards = <StakingRewards>(
-    await stakingRewardsFactory.deploy(
-      "0x4Cd53963Ad8f152A8AeBe0544B5720DD7A90c21B",
-      "0x4Cd53963Ad8f152A8AeBe0544B5720DD7A90c21B",
-      5,
-    )
-  );
-  await factoryContract.deployed();
-  console.log("REWARD FACTORY deployed to: ", factoryContract.address);
+task("deploy:Vault").setAction(async function (taskArguments: TaskArguments, { ethers }) {
+  const rewardVault = await ethers.getContractFactory("RewardVault");
+  const RouteAddress = "";
+  const vault = await rewardVault.deploy(RouteAddress);
+  await vault.deployed();
+  console.log("Vault deployed to: ", vault.address);
 });
-*/
+
+task("deploy:StakingReward").setAction(async function (taskArguments: TaskArguments, { ethers }) {
+  const stakingRewards = await ethers.getContractFactory("StakingRewards");
+  const RouteAddress = "";
+  const VaultAddress = "";
+  const RewardDuration = "";
+  const factoryContract = await stakingRewards.deploy(RouteAddress, RouteAddress, VaultAddress, RewardDuration);
+
+  await factoryContract.deployed();
+  console.log("pool deployed to: ", factoryContract.address);
+});
+
+task("addRewards").setAction(async function (taskArguments: TaskArguments, { ethers }) {
+  const rewardVault = await ethers.getContractFactory("RewardVault");
+  const vaultAddress = "";
+  const rewardAmount = "";
+  const vault = await rewardVault.attach(vaultAddress);
+  await vault.addRewards(rewardAmount);
+});
+
+task("approve:StakingRewards").setAction(async function (taskArguments: TaskArguments, { ethers }) {
+  const rewardVault = await ethers.getContractFactory("RewardVault");
+  const vaultAddress = "";
+  const rewardAmount = "";
+  const stakingRewardAddress = "";
+  const vault = await rewardVault.attach(vaultAddress);
+  await vault.increaseAllowance(stakingRewardAddress, rewardAmount);
+});
 
 task("NotifyRewards").setAction(async function (taskArguments: TaskArguments, { ethers }) {
-  const stakingRewardsFactory: StakingRewards__factory = await ethers.getContractFactory("StakingRewards");
-  const factoryContract: StakingRewards = <StakingRewards>(
-    await stakingRewardsFactory.attach("0xbc32c88C622b94503848009cd7a825998BbfF841")
-  );
-  console.log("hello world");
+  const stakingRewardsContract = await ethers.getContractFactory("StakingRewards");
+  const StakingRewards = "";
+  const RewardAmount = "";
+  const factoryContract = await stakingRewardsContract.attach(StakingRewards);
   try {
-    const tx = await factoryContract.notifyRewardAmount("1000000000000000000000");
+    const tx = await factoryContract.notifyRewardAmount(RewardAmount);
     tx.wait(2);
   } catch (e) {
     console.log("error", e);
   }
 });
-
-/*task("stake").setAction(async function (taskArguments: TaskArguments, { ethers }) {
-  const stakingRewards: StakingRewards__factory = await ethers.getContractFactory("StakingRewards");
-  const stakingRewardsContract: StakingRewards = <StakingRewards>(
-    await stakingRewards.attach("0xbc32c88C622b94503848009cd7a825998BbfF841")
-  );
-  const stakeAmount = ethers.utils.parseEther("1000");
-  await stakingRewardsContract.stake(stakeAmount.toString());
-  const rewards = await stakingRewardsContract.earned("0x50C8B3412E89f87A16ae27aCe63c861573d2376b");
-  console.log("REWARDS ADDRESS", rewards.toString());
-});
-*/
