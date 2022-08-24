@@ -38,7 +38,7 @@ contract RewardVault is EIP712Base, Ownable {
         address receiver,
         uint256 amount
     ) external onlyOwner returns (bool) {
-        IERC20(token).safeTransferFrom(address(this), receiver, amount);
+        IERC20(token).safeTransfer(receiver, amount);
         return true;
     }
 }

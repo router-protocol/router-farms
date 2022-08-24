@@ -48,7 +48,7 @@ function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
   let url = "";
   url = "https://" + network + ".infura.io/v3/" + infuraApiKey;
   if (network == "polygon") {
-    url = "https://polygon-rpc.com";
+    url = "https://matic.getblock.io/mainnet/?api_key=9d73ed81-8bca-4189-880e-156773c7ed80";
   }
   if (network == "mumbai") {
     url = "https://rpc-mumbai.matic.today";
