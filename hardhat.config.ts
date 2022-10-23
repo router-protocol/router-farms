@@ -24,8 +24,8 @@ const chainIds = {
   mainnet: 1,
   rinkeby: 4,
   ropsten: 3,
-  polygon:137,
-  mumbai:80001
+  polygon: 137,
+  mumbai: 80001,
 };
 
 // Ensure that we have all the environment variables we need.
@@ -45,21 +45,21 @@ if (!etherscanApiKey) {
 }
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
-  let url=''
+  let url = "";
   url = "https://" + network + ".infura.io/v3/" + infuraApiKey;
-  if(network=="polygon"){
-    url= "https://rpc-mainnet.matic.network";
+  if (network == "polygon") {
+    url = "https://matic.getblock.io/mainnet/?api_key=9d73ed81-8bca-4189-880e-156773c7ed80";
   }
-  if(network=="mumbai"){
-    url= "https://rpc-mumbai.matic.today";
+  if (network == "mumbai") {
+    url = "https://rpc-mumbai.matic.today";
   }
- 
+
   return {
     accounts: {
       count: 10,
       mnemonic,
       path: "m/44'/60'/0'/0",
-      initialIndex:2,
+      initialIndex: 0,
     },
     chainId: chainIds[network],
     url,
@@ -91,8 +91,8 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:7545",
       // accounts: [privateKey1, privateKey2, ...]
     },
-    polygon:getChainConfig("polygon"),
-    mumbai:getChainConfig("mumbai"),
+    polygon: getChainConfig("polygon"),
+    mumbai: getChainConfig("mumbai"),
   },
   paths: {
     artifacts: "./artifacts",
@@ -104,7 +104,7 @@ const config: HardhatUserConfig = {
     apiKey: etherscanApiKey,
   },
   solidity: {
-    version: "0.6.11",
+    version: "0.8.16",
     settings: {
       metadata: {
         // Not including the metadata hash
